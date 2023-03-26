@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    username: phone
+    password: phone
+    url: jdbc:mysql://localhost:3306/phone
+  
