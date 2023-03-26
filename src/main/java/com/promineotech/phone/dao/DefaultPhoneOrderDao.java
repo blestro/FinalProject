@@ -16,6 +16,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -27,6 +28,7 @@ import com.promineotech.phone.entity.OrderDeleteRequest;
 import com.promineotech.phone.entity.OrderTypeRequest;
 import com.promineotech.phone.entity.Phone;
 import com.promineotech.phone.entity.PhoneType;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Blestro
@@ -34,6 +36,7 @@ import com.promineotech.phone.entity.PhoneType;
  */
 
 @Service
+@Slf4j
 public class DefaultPhoneOrderDao implements PhoneOrderDao{
 
   @Autowired
@@ -193,6 +196,82 @@ public class DefaultPhoneOrderDao implements PhoneOrderDao{
         jdbcTemplate.query(sql, params, new CustomerResultSetExtractor()));
   }
 
+  // Get order using orderNumber and customerId
+  
+  @Override
+  public Order buildOrder(Customer customer, Order order, List<Phone> phones) {
+    return Order.builder()
+        .orderPK(order.getOrderPK())
+        .orderType(order.getOrderType())
+        .price(order.getPrice())
+        .customer(customer)
+        .phones(phones)
+        .build();
+  }
+  
+  @Override
+  public Order getOrder(Long orderNumber) {
+ // @formatter:off
+    String sql = "" 
+        + "SELECT * " 
+        + "FROM orders "
+        + "WHERE order_pk = :order_pk";
+    // @formatter:on
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("order_pk", orderNumber);
+
+    return jdbcTemplate.query(sql, params, new OrderResultSetExtractor());
+
+  }
+
+  public List<Phone> getPhonePk(Long orderNumber) {
+ // @formatter:off
+    String sql = "" 
+        + "SELECT phone_fk " 
+        + "FROM order_phones "
+        + "WHERE order_fk = :order_fk";
+    // @formatter:on
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("order_fk", orderNumber);
+    return jdbcTemplate.query(sql, params, new RowMapper<>() {
+
+      @Override
+      public Phone mapRow(ResultSet rs, int rowNum) throws SQLException {
+        // TODO Auto-generated method stub
+        return Phone.builder()
+            .phonePk(rs.getLong("phone_fk"))
+            .build();
+        // formatter:on
+      }});
+  }
+
+  @Override
+  public List<Phone> getPhones(Long orderNumber) {
+    List<Phone> phonesPk = getPhonePk(orderNumber);
+    
+    List<Phone> phones = new LinkedList<Phone>();
+
+    for (Phone phonePk: phonesPk) {
+      // @formatter:off
+      String sql = "" 
+          + "SELECT * " 
+          + "FROM phones "
+          + "WHERE phone_pk = :phone_pk";
+      // @formatter:on
+      
+      Map<String, Object> params = new HashMap<>();
+      
+      log.info("Phones pk={}", phonePk.getPhonePk());
+      params.put("phone_pk", phonePk.getPhonePk());
+      Phone phone = jdbcTemplate.query(sql, params, new PhoneResultSetExtractor());
+      phones.add(phone);
+    }
+    log.info("Phones From Customer={}", phones);
+    return phones;
+    }
+
   
   
  class CustomerResultSetExtractor implements ResultSetExtractor<Customer> {
@@ -233,29 +312,26 @@ public class DefaultPhoneOrderDao implements PhoneOrderDao{
    }
  }
  
+ class OrderResultSetExtractor implements ResultSetExtractor<Order> {
+   @Override
+   public Order extractData(ResultSet rs) throws SQLException {
+     rs.next();
+
+     // @formatter:off
+     return Order.builder()
+         .orderPK(rs.getLong("order_pk"))
+         .orderType(rs.getString("order_type"))
+         .price(rs.getBigDecimal("price"))
+         .build();
+     // @formatter:on
+   }
+ }
+ 
  
   class SqlParams {
     String sql;
     MapSqlParameterSource source = new MapSqlParameterSource();
   }
 
-  @Override
-  public Order getOrder(Long orderNumber, Customer customer) {
- // @formatter:off
-    String sql = "" 
-        + "SELECT * " 
-        + "FROM orders "
-        + "WHERE order_pk = :order_pk ";
-    // @formatter:on
-
-    Map<String, Object> params = new HashMap<>();
-    params.put("order_pk", orderNumber);
-
-    return Order.builder()
-        .orderPK(orderNumber)
-        .customer(customer)
-        .orderType(sql)
-        .build();
+  
   }
-
-}

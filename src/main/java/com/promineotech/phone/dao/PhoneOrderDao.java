@@ -66,6 +66,20 @@ public interface PhoneOrderDao {
    * @param orderNumber
    * @return
    */
-  Order getOrder(Long orderNumber, Customer customer);
+  Order getOrder(Long orderNumber);
+
+  /**
+   * @param phonesPk
+   * @return
+   */
+  List<Phone> getPhones(Long orderNumber);
+
+  /**
+   * @param customer
+   * @param order
+   * @param phones
+   * @return
+   */
+  Order buildOrder(Customer customer, Order order, List<Phone> phones);
 
 }

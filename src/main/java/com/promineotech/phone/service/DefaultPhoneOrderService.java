@@ -83,7 +83,15 @@ public class DefaultPhoneOrderService implements PhoneOrderService {
         .orElseThrow(() -> new NoSuchElementException("Customer with ID="
             + customerId + " was not found"));
     
-    return phoneOrderDao.getOrder(orderNumber, customer);
+    Order order = phoneOrderDao.getOrder(orderNumber); 
+    
+    List<Phone> phones = phoneOrderDao.getPhones(orderNumber);
+    
+    log.info("Phones for Order={}", phones);
+    
+    Order full_order = phoneOrderDao.buildOrder(customer, order, phones);
+    
+    return full_order;
   }
 
   

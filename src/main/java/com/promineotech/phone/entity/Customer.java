@@ -1,6 +1,5 @@
 package com.promineotech.phone.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Builder;
 import lombok.Data;
 
